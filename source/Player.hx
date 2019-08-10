@@ -11,67 +11,84 @@ class Player extends FlxSprite {
     public var m_trail: FlxTrail;
 
     var m_movementFrameCounter: Int = 0;
-    var m_angle: Float = 0;
-    var m_up: Bool = false;
-    var m_right: Bool = false;
-    var m_down: Bool = false;
-    var m_left: Bool = false;
+    var m_rightPressed: Bool = false;
+    var m_leftPressed: Bool = false;
+    var m_leftReleased: Bool = false;
+    var m_rightReleased: Bool = false;
 
-    public function new(?x: Float = 0, ?y: Float) {
+    var m_direction: Int = 0;
+
+    var m_jumpTime: Float = 0;
+    var m_maxJumpTime: Float = 0.25;
+    var m_jumpSpeed: Int = 250;
+    public function new(?x: Float = 0, ?y: Float = 0) {
         super(x, y);
-        makeGraphic(16, 16, FlxColor.WHITE);
+        makeGraphic(16, 16, FlxColor.BLACK);
         drag.x = 1000;
         drag.y = 1000;
+        acceleration.y = 600;
+        maxVelocity.set(m_speed, m_jumpSpeed);
         m_trail = new FlxTrail(this);
         solid = true;
     }
 
     override function update(elapsed:Float) {
-        movement();
+        movement(elapsed);
         super.update(elapsed);
     }
 
-    function movement(){
-        m_up = keys.anyPressed([UP]);
-        m_right = keys.anyPressed([RIGHT]);
-        m_down = keys.anyPressed([DOWN]);
-        m_left = keys.anyPressed([LEFT]);
-        if(!(m_up || m_down || m_left || m_right)){
+    function movement(elapsed: Float){
+        m_rightPressed = keys.anyPressed([RIGHT]);
+        m_leftPressed = keys.anyPressed([LEFT]);
+        m_rightReleased = keys.anyJustReleased([RIGHT]);
+        m_leftReleased = keys.anyJustReleased([LEFT]);
+        m_direction = 0;
+        if(m_leftReleased || m_rightReleased){
             m_movementFrameCounter = 0;
             return;
         }
-        if(m_up){
-            m_angle = -90;
-            if(m_right){
-                m_angle += 45;
-            }
-            if(m_left){
-                m_angle -= 45;
-            }
+
+        if(m_rightPressed && !m_leftPressed)
+        {
+            m_direction = 1;
         }
-        else if(m_down){
-            m_angle = 90;
-            if(m_right){
-                m_angle -= 45;
-            }
-            if(m_left){
-                m_angle += 45;
-            }
+        else if(m_leftPressed && !m_rightPressed)
+        {
+            m_direction = -1;
         }
-        else if(m_right){
-            m_angle = 0;
-        }
-        else if (m_left){
-            m_angle = 180;
-        }
+        Jump(elapsed);
         SetSpeed();
-        velocity.set(m_speed, 0);
-        velocity.rotate(FlxPoint.weak(0, 0), m_angle);
+        velocity.set(m_speed, velocity.y);
+    }
+
+    function Jump(elapsed: Float)
+    {
+        if(keys.anyJustPressed([SPACE]))
+        {
+            m_jumpTime = 0;
+        }
+
+        if(keys.anyPressed([SPACE]) && m_jumpTime >= 0)
+        {
+            m_jumpTime += elapsed;
+            if(m_jumpTime > m_maxJumpTime)
+            {
+                m_jumpTime = -1;
+            }
+            else if(m_jumpTime > 0)
+            {
+                velocity.y = -0.6 * maxVelocity.y;
+            }
+        }
+        else 
+        {
+            m_jumpTime = -1;
+        }
     }
 
     function SetSpeed()
     {
         if(m_movementFrameCounter < 16){ m_movementFrameCounter++; }
-        m_speed = m_movementFrameCounter * m_movementFrameCounter;
+        m_speed = m_movementFrameCounter * m_movementFrameCounter * m_direction;
     }
 }
